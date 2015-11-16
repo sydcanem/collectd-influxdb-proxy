@@ -13,12 +13,13 @@ On collectd side, add following plugin
       </Node>
     </Plugin>
 
-Where 10.0.0.130:8079 is the listening point of your collectd-influxdb proxy.
+Where `http://localhost:25826` is the listening point of your collectd-influxdb proxy.
 
 To start the proxy
 
-    node proxy.js --influxdb_db mydb --influxdb_user myuser --influxdb_password mypassword
-
+````bash
+node proxy.js --influxdb_db mydb --influxdb_user myuser --influxdb_password mypassword
+````
 Where mydb, myuser and myspassword are connection parameter to Influxdb. By default, collectd-influxb-proxy assume influxdb is deployed on the same server.
 
 Other collectd-influxdb-proxy :

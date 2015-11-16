@@ -1,12 +1,14 @@
 {
   "name": "collectd-influxdb-proxy",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "author": "Bertrand Paquet <bertrand.paquet@gmail.com>",
-  "main": "./proxy.js",
-  "devDependencies": {
-    "supervisor": "0.5.0"
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "http://github.com/sydcanem/collectd-influxdb-proxy.git"
   },
   "dependencies": {
     "optimist": "0.3.4"
-  }
+  },
+  "bin": "./bin/proxy.js"
 }
