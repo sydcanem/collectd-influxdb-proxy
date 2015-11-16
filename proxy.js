@@ -1,5 +1,8 @@
+#!/usr/bin/env node
+'use strict';
 
 var http = require('http'),
+    querystring = require('querystring'),
     argv = require('optimist').argv;
 
 function usage() {
@@ -22,7 +25,7 @@ if (argv.help) {
 }
 
 if (!argv.proxy_http_port) {
-  argv.proxy_http_port = 8079;
+  argv.proxy_http_port = 25826;
 }
 
 if (!argv.proxy_http_address) {
@@ -52,15 +55,15 @@ if (!argv.influxdb_password) {
   usage();
 }
 
-argv.influxdb_path = '/db/' + argv.influxdb_db + '/series?u=' + argv.influxdb_user + '&p=' + argv.influxdb_password + '&time_precision=s';
-console.log('Influx db config');
+argv.influxdb_path = '/write?u=' + argv.influxdb_user + '&p=' + argv.influxdb_password + '&db=' + argv.influxdb_db;
+
 console.log('Host :', argv.influxdb_host, ':', argv.influxdb_port);
 console.log('Path :', argv.influxdb_path);
 
 var server = http.createServer(function(req, res) {
   var data = '';
   req.on('data', function(chunk) {
-    data = data + chunk.toString();
+    data += chunk.toString();
   });
   req.on('end', function() {
     res.writeHead(200);
@@ -68,46 +71,50 @@ var server = http.createServer(function(req, res) {
 
     var output = [];
     var parsed = JSON.parse(data);
+
+    var lines = '';
     parsed.forEach(function(x) {
-      var name = x.host + '.' + x.plugin;
+      var metric = x.plugin;
       if (x.plugin_instance !== '') {
-        name = name + '.' + x.plugin_instance;
+        metric = metric + '.' + x.plugin_instance;
       }
-      name = name + '.' + x.type;
+      metric = metric + '.' + x.type;
       if (x.type_instance !== '') {
-        name = name + '.' + x.type_instance;
+        metric = metric + '.' + x.type_instance;
       }
-      for(var z in x.dstypes) {
-        if (x.dstypes[z] == 'counter' || x.dstypes[z] == 'gauge') {
-          var n = name + '.' + x.dsnames[z];
-          if (argv.verbose) {
-            console.log('Push metric', n);
-          }
-          output.push({
-            name: n,
-            columns: ['time', 'value'],
-            points: [[x.time, x.values[z]]],
-          });
+      for (var z in x.dstypes) {
+        if (x.dstypes[z] == 'counter' || x.dstypes[z] == 'gauge' || x.dstypes[z] == 'derive') {
+          var n = metric + '.' + x.dsnames[z] + ',host=' + x.host;
+          var l = n + ' value=' + x.values[z];
+          lines += l + '\n';
         }
       }
     });
+
+    if (argv.verbose) {
+      console.log('Push metrics:\n', lines);
+    }
+
     var forwarded_req = {
       hostname: argv.influxdb_host,
       port: argv.influxdb_port,
       path: argv.influxdb_path,
-      method: 'POST'
+      method: 'POST',
+      agent: false
     };
-    var r = http.request(forwarded_req, function(rr) {
-      if (rr.statusCode != "200") {
+
+    var req = http.request(forwarded_req, function(rr) {
+      if (rr.statusCode >= 400) {
         console.error('Request refused by influx db', rr.statusCode);
       }
     });
 
-    r.on('error', function(e) {
+    req.on('error', function(e) {
       console.log('problem with request: ' + e.message);
     });
-    r.write(JSON.stringify(output));
-    r.end();
+
+    req.write(lines);
+    req.end();
   });
 });
 

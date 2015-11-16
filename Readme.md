@@ -6,10 +6,11 @@ Small proxy between collectd and influxdb.
 On collectd side, add following plugin
 
     LoadPlugin "write_http"
-    <Plugin "write_http">
-      <URL "http://10.0.0.130:8079">
+    <Plugin write_http>
+      <Node "example">
+        URL "http://localhost:25826"
         Format "JSON"
-      </URL>
+      </Node>
     </Plugin>
 
 Where 10.0.0.130:8079 is the listening point of your collectd-influxdb proxy.
